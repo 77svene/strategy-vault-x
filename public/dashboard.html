@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StrategyVaultX | ZK-Verified Agent Strategy Marketplace</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.11.1/dist/ethers.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --primary: #6366f1; --primary-dark: #4f46e5; --secondary: #0ea5e9; --success: #22c55e; --warning: #f59e0b; --danger: #ef4444; --dark: #0f172a; --light: #f8fafc; --gray: #64748b; --border: #e2e8f0; --card-bg: #1e293b; --card-hover: #334155; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--dark); color: var(--light); line-height: 1.6; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        header { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); padding: 30px; border-radius: 16px; margin-bottom: 30px; box-shadow: 0 10px 40px rgba(99, 102, 241, 0.3); }
+        header h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 10px; background: linear-gradient(135deg, #fff 0%, #e0e7ff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        header p { font-size: 1.1rem; opacity: 0.9; max-width: 600px; }
+        .status-bar { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 20px; }
+        .status-item { background: rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 8px; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; animation: pulse 2s infinite; }
+        .status-dot.connected { background: var(--success); }
+        .status-dot.disconnected { background: var(--danger); }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .connect-btn { background: var(--light); color: var(--dark); border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s; font-size: 1rem; }
+        .connect-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255,255,255,0.2); }
+        .connect-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; margin-bottom: 30px; }
+        .card { background: var(--card-bg); border-radius: 16px; padding: 24px; border: 1px solid var(--border); transition: all 0.3s; }
+        .card:hover { border-color: var(--primary); transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border); }
+        .card-title { font-size: 1.25rem; font-weight: 700; color: var(--light); display: flex; align-items: center; gap: 10px; }
+        .card-icon { width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .badge-verified { background: rgba(34, 197, 94, 0.2); color: var(--success); border: 1px solid rgba(34, 197, 94, 0.3); }
+        .badge-pending { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .badge-new { background: rgba(99, 102, 241, 0.2); color: var(--primary); border: 1px solid rgba(99, 102, 241, 0.3); }
+        .metric-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px; }
+        .metric { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-align: center; }
+        .metric-value { font-size: 1.5rem; font-weight: 700; color: var(--primary); margin-bottom: 5px; }
+        .metric-label { font-size: 0.85rem; color: var(--gray); }
+        .strategy-list { margin-top: 20px; }
+        .strategy-item { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 10px; margin-bottom: 12px; border-left: 4px solid var(--gray); transition: all 0.3s; }
+        .strategy-item:hover { border-left-color: var(--primary); background: rgba(255,255,255,0.06); }
+        .strategy-item.verified { border-left-color: var(--success); }
+        .strategy-item.pending { border-left-color: var(--warning); }
+        .strategy-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .strategy-id { font-weight: 700; font-size: 1.1rem; color: var(--light); }
+        .strategy-address { font-size: 0.8rem; color: var(--gray); font-family: monospace; }
+        .strategy-stats { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 10px; }
+        .stat { display: flex; flex-direction: column; }
+        .stat-value { font-weight: 600; color: var(--light); }
+        .stat-label { font-size: 0.75rem; color: var(--gray); }
+        .performance-bar { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-top: 10px; overflow: hidden; }
+        .performance-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+        .performance-fill.high { background: linear-gradient(90deg, var(--success) 0%, #86efac 100%); }
+        .performance-fill.medium { background: linear-gradient(90deg, var(--warning) 0%, #fcd34d 100%); }
+        .performance-fill.low { background: linear-gradient(90deg, var(--danger) 0%, #fca5a5 100%); }
+        .agent-list { margin-top: 20px; }
+        .agent-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 10px; }
+        .agent-info { display: flex; align-items: center; gap: 15px; }
+        .agent-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); display: flex; align-items: center; justify-content: center; font-weight: 700; }
+        .agent-details h4 { font-weight: 600; margin-bottom: 4px; }
+        .agent-details p { font-size: 0.85rem; color: var(--gray); }
+        .agent-stats { display: flex; gap: 20px; }
+        .agent-stat { text-align: center; }
+        .agent-stat-value { font-weight: 700; color: var(--primary); font-size: 1.1rem; }
+        .agent-stat-label { font-size: 0.75rem; color: var(--gray); }
+        .loading { text-align: center; padding: 40px; color: var(--gray); }
+        .loading-spinner { width: 40px; height: 40px; border: 4px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-banner { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); color: #fca5a5; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: none; }
+        .error-banner.show { display: block; }
+        .success-banner { background: rgba(34, 197, 94, 0.1); border: 1px solid var(--success); color: #86efac; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: none; }
+        .success-banner.show { display: block; }
+        .refresh-btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.3s; }
+        .refresh-btn:hover { background: var(--primary-dark); transform: scale(1.05); }
+        .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        footer { text-align: center; padding: 30px; color: var(--gray); font-size: 0.9rem; border-top: 1px solid var(--border); margin-top: 40px; }
+        .zk-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(14, 165, 233, 0.2) 100%); padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+        .zk-badge::before { content: '🔐'; }
+        .contract-address { font-family: monospace; font-size: 0.85rem; color: var(--gray); word-break: break-all; }
+        .copy-btn { background: rgba(255,255,255,0.1); border: none; color: var(--light); padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; margin-left: 8px; transition: all 0.3s; }
+        .copy-btn:hover { background: rgba(255,255,255,0.2); }
+        .filter-bar { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; }
+        .filter-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--gray); padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: all 0.3s; font-size: 0.9rem; }
+        .filter-btn:hover, .filter-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--gray); }
+        .empty-state-icon { font-size: 4rem; margin-bottom: 20px; opacity: 0.5; }
+        .empty-state h3 { font-size: 1.5rem; margin-bottom: 10px; color: var(--light); }
+        .empty-state p { max-width: 400px; margin: 0 auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>StrategyVaultX</h1>
+            <p>ZK-Verified Agent Strategy Marketplace | First decentralized marketplace for autonomous trading agents with cryptographic uniqueness proofs</p>
+            <div class="status-bar">
+                <div class="status-item">
+                    <div class="status-dot" id="connectionStatus"></div>
+                    <span id="connectionText">Disconnected</span>
+                </div>
+                <div class="status-item">
+                    <span class="zk-badge">ZK-Verified</span>
+                </div>
+                <div class="status-item">
+                    <span id="networkInfo">Unknown Network</span>
+                </div>
+            </div>
+            <div style="margin-top: 20px;">
+                <button class="connect-btn" id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
+            </div>
+        </header>
+
+        <div class="error-banner" id="errorBanner"></div>
+        <div class="success-banner" id="successBanner"></div>
+
+        <div class="grid">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">📊</div>
+                        <span>Market Overview</span>
+                    </div>
+                    <button class="refresh-btn" id="refreshBtn" onclick="refreshData()" disabled>
+                        <span>🔄</span> Refresh
+                    </button>
+                </div>
+                <div class="metric-grid">
+                    <div class="metric">
+                        <div class="metric-value" id="totalStrategies">0</div>
+                        <div class="metric-label">Registered Strategies</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="totalAgents">0</div>
+                        <div class="metric-label">Active Agents</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="totalVerifications">0</div>
+                        <div class="metric-label">ZK Verifications</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="totalVolume">0</div>
+                        <div class="metric-label">Total Volume (ETH)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">🔐</div>
+                        <span>Verification Status</span>
+                    </div>
+                </div>
+                <div class="metric-grid">
+                    <div class="metric">
+                        <div class="metric-value" id="verifiedCount">0</div>
+                        <div class="metric-label">Verified Strategies</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="pendingCount">0</div>
+                        <div class="metric-label">Pending Verification</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="avgPerformance">0%</div>
+                        <div class="metric-label">Avg Performance</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="bondedAmount">0</div>
+                        <div class="metric-label">Total Bonded (ETH)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <div class="card-icon">📋</div>
+                    <span>Registered Strategies</span>
+                </div>
+            </div>
+            <div class="filter-bar">
+                <button class="filter-btn active" onclick="filterStrategies('all')">All</button>
+                <button class="filter-btn" onclick="filterStrategies('verified')">Verified</button>
+                <button class="filter-btn" onclick="filterStrategies('pending')">Pending</button>
+                <button class="filter-btn" onclick="filterStrategies('top')">Top Performers</button>
+            </div>
+            <div class="strategy-list" id="strategyList">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading strategies...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 24px;">
+            <div class="card-header">
+                <div class="card-title">
+                    <div class="card-icon">🤖</div>
+                    <span>Agent Performance</span>
+                </div>
+            </div>
+            <div class="agent-list" id="agentList">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading agents...</p>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>StrategyVaultX | ZK-Verified Agent Strategy Marketplace</p>
+            <p style="margin-top: 10px;">Built with Circom | Ethereum | ERC-8004 Compliance</p>
+            <p style="margin-top: 10px; font-size: 0.8rem;">© 2024 StrategyVaultX. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        let provider = null;
+        let signer = null;
+        let userAddress = null;
+        let registryContract = null;
+        let marketplaceContract = null;
+        let registryAddress = null;
+        let marketplaceAddress = null;
+        let strategies = [];
+        let agents = [];
+        let currentFilter = 'all';
+
+        const CONTRACT_ADDRESSES = {
+            '1': { registry: '0x0000000000000000000000000000000000000000', marketplace: '0x0000000000000000000000000000000000000000' },
+            '11155111': { registry: '0x0000000000000000000000000000000000000000', marketplace: '0x0000000000000000000000000000000000000000' }
+        };
+
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    showError('MetaMask not installed. Please install MetaMask to use this dApp.');
+                    return;
+                }
+
+                provider = new ethers.BrowserProvider(window.ethereum);
+                await provider.send('eth_requestAccounts', []);
+                signer = await provider.getSigner();
+                userAddress = await signer.getAddress();
+
+                const network = await provider.getNetwork();
+                const networkId = network.chainId.toString();
+                const networkName = network.name;
+
+                document.getElementById('connectionStatus').className = 'status-dot connected';
+                document.getElementById('connectionText').textContent = 'Connected';
+                document.getElementById('networkInfo').textContent = `${networkName} (${networkId})`;
+                document.getElementById('connectBtn').textContent = userAddress.slice(0, 6) + '...' + userAddress.slice(-4);
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('refreshBtn').disabled = false;
+
+                registryAddress = CONTRACT_ADDRESSES[networkId]?.registry || '0x0000000000000000000000000000000000000000';
+                marketplaceAddress = CONTRACT_ADDRESSES[networkId]?.marketplace || '0x0000000000000000000000000000000000000000';
+
+                const registryABI = [
+                    'function getStrategyCount() view returns (uint256)',
+                    'function getStrategy(uint256) view returns (tuple(uint256 id, address agent, bytes32 strategyHash, uint256 bond, uint256 lockTime, uint256 performanceScore, uint256 licenseCount, bool verified, uint256 createdAt))',
+                    'function getStrategyByAgent(address) view returns (tuple(uint256 id, address agent, bytes32 strategyHash, uint256 bond, uint256 lockTime, uint256 performanceScore, uint256 licenseCount, bool verified, uint256 createdAt))'
+                ];
+
+                const marketplaceABI = [
+                    'function getAgentReputation(address) view returns (uint256)',
+                    'function getAgentBond(address) view returns (uint256)',
+                    'function getStrategyPerformanceScore(uint256) view returns (uint256)',
+                    'function totalLicenseFees(uint256) view returns (uint256)',
+                    'function licensedAgents(uint256, uint256) view returns (address)',
+                    'function strategyBondLockTime(uint256) view returns (uint256)'
+                ];
+
+                registryContract = new ethers.Contract(registryAddress, registryABI, provider);
+                marketplaceContract = new ethers.Contract(marketplaceAddress, marketplaceABI, provider);
+
+                await refreshData();
+                showSuccess('Wallet connected successfully!');
+            } catch (error) {
+                console.error('Connection error:', error);
+                showError('Failed to connect wallet: ' + error.message);
+            }
+        }
+
+        async function refreshData() {
+            try {
+                document.getElementById('strategyList').innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Loading strategies...</p></div>';
+                document.getElementById('agentList').innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Loading agents...</p></div>';
+
+                const strategyCount = await registryContract.getStrategyCount();
+                strategies = [];
+                agents = [];
+
+                for (let i = 0; i < strategyCount; i++) {
+                    try {
+                        const strategy = await registryContract.getStrategy(i);
+                        strategies.push({
+                            id: strategy.id,
+                            agent: strategy.agent,
+                            strategyHash: strategy.strategyHash,
+                            bond: strategy.bond,
+                            lockTime: strategy.lockTime,
+                            performanceScore: strategy.performanceScore,
+                            licenseCount: strategy.licenseCount,
+                            verified: strategy.verified,
+                            createdAt: strategy.createdAt
+                        });
+
+                        const reputation = await marketplaceContract.getAgentReputation(strategy.agent);
+                        const bond = await marketplaceContract.getAgentBond(strategy.agent);
+                        const performanceScore = await marketplaceContract.getStrategyPerformanceScore(strategy.id);
+                        const totalFees = await marketplaceContract.totalLicenseFees(strategy.id);
+
+                        agents.push({
+                            address: strategy.agent,
+                            reputation: reputation,
+                            bond: bond,
+                            performanceScore: performanceScore,
+                            totalFees: totalFees,
+                            strategyCount: strategy.licenseCount
+                        });
+                    } catch (error) {
+                        console.error('Error fetching strategy:', error);
+                    }
+                }
+
+                updateDashboard();
+                renderStrategies();
+                renderAgents();
+            } catch (error) {
+                console.error('Refresh error:', error);
+                showError('Failed to refresh data: ' + error.message);
+            }
+        }
+
+        function updateDashboard() {
+            const verifiedCount = strategies.filter(s => s.verified).length;
+            const pendingCount = strategies.length - verifiedCount;
+            const totalVolume = strategies.reduce((sum, s) => sum + Number(s.licenseCount) * 0.05, 0);
+            const avgPerformance = strategies.length > 0 
+                ? Math.round(strategies.reduce((sum, s) => sum + Number(s.performanceScore), 0) / strategies.length) 
+                : 0;
+            const totalBonded = strategies.reduce((sum, s) => sum + Number(s.bond), 0);
+
+            document.getElementById('totalStrategies').textContent = strategies.length;
+            document.getElementById('totalAgents').textContent = new Set(agents.map(a => a.address)).size;
+            document.getElementById('totalVerifications').textContent = verifiedCount;
+            document.getElementById('totalVolume').textContent = totalVolume.toFixed(2);
+            document.getElementById('verifiedCount').textContent = verifiedCount;
+            document.getElementById('pendingCount').textContent = pendingCount;
+            document.getElementById('avgPerformance').textContent = avgPerformance + '%';
+            document.getElementById('bondedAmount').textContent = totalBonded.toFixed(2);
+        }
+
+        function renderStrategies() {
+            const container = document.getElementById('strategyList');
+            let filteredStrategies = strategies;
+
+            if (currentFilter === 'verified') {
+                filteredStrategies = strategies.filter(s => s.verified);
+            } else if (currentFilter === 'pending') {
+                filteredStrategies = strategies.filter(s => !s.verified);
+            } else if (currentFilter === 'top') {
+                filteredStrategies = [...strategies].sort((a, b) => Number(b.performanceScore) - Number(a.performanceScore)).slice(0, 10);
+            }
+
+            if (filteredStrategies.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <h3>No Strategies Found</h3>
+                        <p>Be the first to deploy a ZK-verified trading strategy on StrategyVaultX</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filteredStrategies.map(strategy => {
+                const performanceClass = Number(strategy.performanceScore) > 75 ? 'high' : Number(strategy.performanceScore) > 50 ? 'medium' : 'low';
+                const statusClass = strategy.verified ? 'verified' : 'pending';
+                const statusBadge = strategy.verified ? '<span class="badge badge-verified">✓ Verified</span>' : '<span class="badge badge-pending">⏳ Pending</span>';
+                const createdAt = new Date(Number(strategy.createdAt) * 1000).toLocaleDateString();
+
+                return `
+                    <div class="strategy-item ${statusClass}">
+                        <div class="strategy-header">
+                            <div>
+                                <div class="strategy-id">Strategy #${strategy.id.toString()}</div>
+                                <div class="strategy-address">${strategy.agent}</div>
+                            </div>
+                            <div>
+                                ${statusBadge}
+                                <button class="copy-btn" onclick="copyAddress('${strategy.agent}')">📋</button>
+                            </div>
+                        </div>
+                        <div class="strategy-stats">
+                            <div class="stat">
+                                <span class="stat-value">${strategy.licenseCount}</span>
+                                <span class="stat-label">Licenses</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value">${Number(strategy.bond).toFixed(2)} ETH</span>
+                                <span class="stat-label">Bond</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value">${createdAt}</span>
+                                <span class="stat-label">Created</span>
+                            </div>
+                        </div>
+                        <div class="performance-bar">
+                            <div class="performance-fill ${performanceClass}" style="width: ${Math.min(Number(strategy.performanceScore), 100)}%"></div>
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--gray); margin-top: 8px;">Performance Score: ${strategy.performanceScore}</p>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderAgents() {
+            const container = document.getElementById('agentList');
+            const uniqueAgents = [...new Map(agents.map(a => [a.address, a])).values()];
+
+            if (uniqueAgents.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🤖</div>
+                        <h3>No Agents Found</h3>
+                        <p>Deploy your first autonomous trading agent to start competing on StrategyVaultX</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = uniqueAgents.map(agent => {
+                const reputationClass = Number(agent.reputation) > 1000 ? 'high' : Number(agent.reputation) > 500 ? 'medium' : 'low';
+                const performanceClass = Number(agent.performanceScore) > 75 ? 'high' : Number(agent.performanceScore) > 50 ? 'medium' : 'low';
+
+                return `
+                    <div class="agent-item">
+                        <div class="agent-info">
+                            <div class="agent-avatar">${agent.address.slice(2, 4).toUpperCase()}</div>
+                            <div class="agent-details">
+                                <h4>${agent.address.slice(0, 6)}...${agent.address.slice(-4)}</h4>
+                                <p>Reputation: ${Number(agent.reputation).toLocaleString()}</p>
+                            </div>
+                        </div>
+                        <div class="agent-stats">
+                            <div class="agent-stat">
+                                <div class="agent-stat-value">${Number(agent.bond).toFixed(2)} ETH</div>
+                                <div class="agent-stat-label">Bond</div>
+                            </div>
+                            <div class="agent-stat">
+                                <div class="agent-stat-value">${Number(agent.performanceScore)}%</div>
+                                <div class="agent-stat-label">Performance</div>
+                            </div>
+                            <div class="agent-stat">
+                                <div class="agent-stat-value">${agent.strategyCount}</div>
+                                <div class="agent-stat-label">Strategies</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterStrategies(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            renderStrategies();
+        }
+
+        function copyAddress(address) {
+            navigator.clipboard.writeText(address).then(() => {
+                showSuccess('Address copied to clipboard!');
+            }).catch(() => {
+                showError('Failed to copy address');
+            });
+        }
+
+        function showError(message) {
+            const banner = document.getElementById('errorBanner');
+            banner.textContent = message;
+            banner.classList.add('show');
+            setTimeout(() => banner.classList.remove('show'), 5000);
+        }
+
+        function showSuccess(message) {
+            const banner = document.getElementById('successBanner');
+            banner.textContent = message;
+            banner.classList.add('show');
+            setTimeout(() => banner.classList.remove('show'), 5000);
+        }
+
+        if (typeof window.ethereum !== 'undefined') {
+            window.ethereum.on('accountsChanged', () => {
+                window.location.reload();
+            });
+            window.ethereum.on('chainChanged', () => {
+                window.location.reload();
+            });
+        }
+    </script>
+</body>
+</html>
