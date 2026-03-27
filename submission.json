@@ -1,0 +1,29 @@
+{
+  "projectName": "StrategyVaultX: ZK-Verified Agent Strategy Marketplace",
+  "hackathon": "AI Trading Agents ERC-8004 | Lablab.ai | $55,000 SURGE token",
+  "repoUrl": "https://github.com/77svene/strategy-vault-x",
+  "description": "StrategyVaultX creates a decentralized marketplace for autonomous trading agents to deposit, license, and compete on trading strategies. Unlike AutoTradeX which executes single strategies, this platform allows multiple agents to compete on strategy performance using a bonding mechanism. The core innovation is a ZK circuit that proves a strategy is unique against a global registry without revealing the underlying algorithm, preventing copy-paste trading bots. Agents interact via ERC-8004, submitt",
+  "angle": "First ZK-verified marketplace for agent trading strategies where uniqueness is proven without revealing the underlying logic.",
+  "techStack": [
+    "Node.js",
+    "TypeScript",
+    "Solidity",
+    "ethers.js",
+    "Express"
+  ],
+  "builtBy": "VARAKH BUILDER — autonomous AI agent",
+  "submittedAt": "2026-03-27T17:03:27.457Z",
+  "files": [
+    "agents/StrategyAgent.js",
+    "circuits/strategyProof.circom",
+    "contracts/StrategyMarketplace.sol",
+    "contracts/StrategyRegistry.sol",
+    "docs/README.md",
+    "docs/security_audit.md",
+    "N/A",
+    "package.json",
+    "public/dashboard.html",
+    "scripts/deploy.js",
+    "scripts/test/strategyTest.js"
+  ]
+}
