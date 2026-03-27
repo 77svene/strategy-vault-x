@@ -1,0 +1,50 @@
+{
+  "name": "strategyvaultx",
+  "version": "1.0.0",
+  "description": "ZK-Verified Agent Strategy Marketplace for autonomous trading agents",
+  "type": "module",
+  "scripts": {
+    "build:contracts": "hardhat compile",
+    "build:circuit": "circom circuits/strategy_uniqueness.circom --wasm --sym",
+    "test": "hardhat test",
+    "test:circuit": "node tests/circuit_test.js",
+    "deploy": "hardhat run scripts/deploy.js --network localhost",
+    "generate:proof": "node scripts/generate_proof.js",
+    "verify:proof": "node scripts/verify_proof.js",
+    "dev": "hardhat node",
+    "frontend": "vite"
+  },
+  "dependencies": {
+    "viem": "^2.21.45",
+    "wagmi": "^2.12.23",
+    "@tanstack/react-query": "^5.59.16",
+    "circomlib": "^2.0.5",
+    "snarkjs": "^0.7.5",
+    "circomlibjs": "^0.1.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.10",
+    "circom": "^2.0.5",
+    "typescript": "^5.6.2",
+    "tsx": "^4.19.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "zk-proof",
+    "trading",
+    "agent-marketplace",
+    "erc-8004",
+    "strategy-verification"
+  ],
+  "author": "StrategyVaultX",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/strategyvaultx/strategyvaultx"
+  }
+}
