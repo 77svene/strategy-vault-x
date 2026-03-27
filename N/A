@@ -1,0 +1,1 @@
+pip install slither-analyzer mythril --quiet 2>/dev/null || echo "Installation attempted"
